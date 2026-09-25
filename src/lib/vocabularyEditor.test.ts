@@ -8,7 +8,7 @@ import {
 } from "./vocabularyEditor";
 
 const entries: CustomVocabEntry[] = [
-  { value: "GladiaFlow", intensity: 0.4 },
+  { value: "Saydrop", intensity: 0.4 },
   { value: "WebSocket", intensity: 0.5 },
 ];
 
@@ -18,26 +18,26 @@ describe("validateVocabularyTerm", () => {
   });
 
   it("rejects case-insensitive duplicates", () => {
-    expect(validateVocabularyTerm(entries, " gladiaflow ", null)).toBe(
+    expect(validateVocabularyTerm(entries, " saydrop ", null)).toBe(
       "This term is already in your vocabulary.",
     );
   });
 
   it("allows the currently edited term", () => {
-    expect(validateVocabularyTerm(entries, "gladiaflow", 0)).toBeNull();
+    expect(validateVocabularyTerm(entries, "saydrop", 0)).toBeNull();
   });
 });
 
 describe("normalizePronunciationCandidate", () => {
   it("trims a unique pronunciation", () => {
     expect(
-      normalizePronunciationCandidate(["gladioflow"], " gladiaflaw "),
-    ).toBe("gladiaflaw");
+      normalizePronunciationCandidate(["say drop"], " stay drop "),
+    ).toBe("stay drop");
   });
 
   it("rejects empty and case-insensitive duplicate pronunciations", () => {
     expect(
-      normalizePronunciationCandidate(["Gladioflow"], "gladioflow"),
+      normalizePronunciationCandidate(["Say drop"], "say drop"),
     ).toBeNull();
     expect(normalizePronunciationCandidate([], "  ")).toBeNull();
   });

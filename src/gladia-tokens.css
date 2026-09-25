@@ -123,7 +123,8 @@
   --radius-full: 9999px;
 
   /* Typography */
-  --font-sans: "Suisse Intl", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans:
+    "Suisse Intl", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: var(--font-sans);
 
   --font-size-10: 10px;
@@ -154,4 +155,47 @@
 
   /* Layout */
   --max-w-container: 1200px;
+}
+
+/* Theme: the resolved theme is set on <html data-theme="light|dark"> by
+   index.html (before first paint) and src/lib/theme.ts. The dark values above
+   are the defaults, so no attribute (overlay pill, screenshot gallery) means
+   dark. Light only overrides semantic tokens; primitives stay unchanged. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  /* Semantic — text (all >= 4.5:1 on every light surface below) */
+  --text-primary: #111113;
+  --text-secondary: #52525a;
+  --text-tertiary: #67676f;
+  --text-inverse: var(--color-neutral-0);
+  --text-link: #3a3a40;
+  --text-brand: #6231d0;
+
+  /* Semantic — background: off-white page, white cards, soft grey insets */
+  --bg-primary: #f1f1f2;
+  --bg-secondary: #f8f8f9;
+  --bg-tertiary: var(--color-neutral-0);
+  --bg-inverse: #111113;
+  --bg-elevated: #efeff1;
+  --bg-glass: rgba(255, 255, 255, 0.72);
+  --bg-glass-light: rgba(0, 0, 0, 0.04);
+
+  /* Semantic — border */
+  --border-primary: var(--color-neutral-200);
+  --border-secondary: var(--color-neutral-300);
+  --border-card: rgba(17, 17, 19, 0.14);
+  --border-transparent: rgba(17, 17, 19, 0.08);
+  --border-active: rgba(17, 17, 19, 0.24);
+  --border-focus: #0a6fd6;
+  --border-brand: #6231d0;
+
+  /* Semantic — status (darkened to stay >= 4.5:1 on white and tints) */
+  --status-success: #13703a;
+  --status-warning: #8f5106;
+  --status-error: #b91f1f;
 }

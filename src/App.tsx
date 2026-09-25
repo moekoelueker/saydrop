@@ -33,9 +33,10 @@ import {
 } from "./lib/keyboardUtils";
 import {
   type DictationStats,
-  DEFAULT_DICTATION_STATS,
   DICTATION_STATS_STORAGE_KEY,
   getDictationComment,
+  loadDictationStats,
+  recordDictation,
 } from "./lib/dictationStats";
 import { pickFunnyHomeMessage } from "./lib/messages";
 import { DEFAULT_CUSTOM_VOCABULARY } from "./lib/customVocabulary";
@@ -142,6 +143,7 @@ export default function App() {
   const [configResetError, setConfigResetError] = useState<string | null>(null);
   const [transcript, setTranscript] = useState<string>("");
   const [isRecording, setIsRecording] = useState(false);
+  const [audioLevel, setAudioLevel] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [navScreen, setNavScreen] = useState<NavScreen>("home");
   const [settings, setSettings] = useState<AppSettings>({
@@ -164,7 +166,7 @@ export default function App() {
   const [activationDropdownOpen, setActivationDropdownOpen] = useState(false);
   const [audioDeviceDropdownOpen, setAudioDeviceDropdownOpen] = useState(false);
   const [dictationStats, setDictationStats] = useState<DictationStats>(
-    DEFAULT_DICTATION_STATS,
+    () => loadDictationStats(localStorage),
   );
   const [funnyHomeMessage, setFunnyHomeMessage] = useState<string>(() =>
     pickFunnyHomeMessage(),
@@ -336,6 +338,9 @@ export default function App() {
   const setRecordingState = (recording: boolean) => {
     isRecordingRef.current = recording;
     setIsRecording(recording);
+    if (!recording) {
+      setAudioLevel(0);
+    }
   };
 
   const flushPendingStartRef = useRef<() => void>(() => {});
@@ -382,23 +387,6 @@ export default function App() {
   const handleHistoryQueryChange = useCallback((query: string) => {
     setHistoryQuery(query);
     setHistoryPage(1);
-  }, []);
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(DICTATION_STATS_STORAGE_KEY);
-      if (!stored) return;
-      const parsed = JSON.parse(stored) as Partial<DictationStats>;
-      const totalWords = Number.isFinite(parsed.totalWords)
-        ? Math.max(0, Number(parsed.totalWords))
-        : 0;
-      const totalSeconds = Number.isFinite(parsed.totalSeconds)
-        ? Math.max(0, Number(parsed.totalSeconds))
-        : 0;
-      setDictationStats({ totalWords, totalSeconds });
-    } catch (error) {
-      console.warn("Failed to load dictation stats:", error);
-    }
   }, []);
 
   useEffect(() => {
@@ -633,6 +621,16 @@ export default function App() {
         audioCue.playStartSound();
       });
 
+      const unlistenAudioLevel = await listen<number>(
+        "audio-level",
+        (event) => {
+          if (!isRecordingRef.current) {
+            return;
+          }
+          setAudioLevel(event.payload);
+        },
+      );
+
       const unlistenPartial = await listen<string>(
         "transcription-partial",
         (event) => {
@@ -744,10 +742,13 @@ export default function App() {
               ).catch(() => {});
             }
             const dictatedWords = countWords(bestTranscript);
-            setDictationStats((prev) => ({
-              totalWords: prev.totalWords + dictatedWords,
-              totalSeconds: prev.totalSeconds + elapsedSeconds,
-            }));
+            setDictationStats((prev) =>
+              recordDictation(prev, {
+                words: dictatedWords,
+                seconds: elapsedSeconds,
+                at: new Date(),
+              }),
+            );
             dictationStartTimeRef.current = null;
           }
           if (sessionInitialized.current) {
@@ -817,6 +818,7 @@ export default function App() {
         unlistenHotkeyPressed();
         unlistenHotkeyReleased();
         unlistenAudioReady();
+        unlistenAudioLevel();
         unlistenPartial();
         unlistenFinal();
         unlistenSessionEnded();
@@ -829,6 +831,7 @@ export default function App() {
         unlistenHotkeyPressed,
         unlistenHotkeyReleased,
         unlistenAudioReady,
+        unlistenAudioLevel,
         unlistenPartial,
         unlistenFinal,
         unlistenSessionEnded,
@@ -1759,7 +1762,7 @@ export default function App() {
     return (
       <main className="loading-shell">
         <div className="loading-spinner" />
-        <span className="loading-text">Loading GladiaFlow</span>
+        <span className="loading-text">Loading Saydrop</span>
       </main>
     );
   }
@@ -1895,6 +1898,7 @@ export default function App() {
           {activeScreen === "home" && (
             <HomeView
               isRecording={isRecording}
+              audioLevel={audioLevel}
               isProcessing={isProcessing}
               homeTitle={homeTitle}
               homeSubtitle={homeSubtitle}

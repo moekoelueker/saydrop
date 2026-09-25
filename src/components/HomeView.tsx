@@ -1,10 +1,15 @@
-import type { DictationStats } from "../lib/dictationStats";
+import { useMemo } from "react";
+import {
+  type DictationStats,
+  summarizeDictationStats,
+} from "../lib/dictationStats";
 import { ApiKeyField } from "./ApiKeyField";
 import { VoiceWaveIndicator } from "./VoiceWaveIndicator";
 import { FinalizingSpinner } from "./FinalizingSpinner";
 
 export function HomeView({
   isRecording,
+  audioLevel,
   isProcessing,
   homeTitle,
   homeSubtitle,
@@ -24,8 +29,10 @@ export function HomeView({
   errorMessage,
   onOpenLogs,
   onDismissError,
+  now,
 }: {
   isRecording: boolean;
+  audioLevel: number;
   isProcessing: boolean;
   homeTitle: string;
   homeSubtitle: string | null;
@@ -45,7 +52,27 @@ export function HomeView({
   errorMessage: string | null;
   onOpenLogs: () => void;
   onDismissError: () => void;
+  now?: Date;
 }) {
+  const nowTime = now?.getTime();
+  const summary = useMemo(
+    () =>
+      summarizeDictationStats(
+        dictationStats,
+        nowTime === undefined ? new Date() : new Date(nowTime),
+      ),
+    [dictationStats, nowTime],
+  );
+  const maxWeekWords = Math.max(0, ...summary.week.map((day) => day.words));
+  const weekTotalWords = summary.week.reduce((sum, day) => sum + day.words, 0);
+  const dayLabelFormatter = new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+  const formatDays = (count: number) =>
+    `${count.toLocaleString()} ${count === 1 ? "day" : "days"}`;
+
   return (
     <div className="setup-step setup-step-center setup-step-home">
       {(isRecording || isProcessing) && (
@@ -53,7 +80,7 @@ export function HomeView({
           className={`ready-icon ${isRecording ? "recording" : ""} ${isProcessing ? "processing" : ""}`}
         >
           {isRecording ? (
-            <VoiceWaveIndicator isListening={isRecording} />
+            <VoiceWaveIndicator isListening={isRecording} level={audioLevel} />
           ) : (
             <FinalizingSpinner />
           )}
@@ -73,7 +100,29 @@ export function HomeView({
           <h3 className="dictation-stats-title">Dictation stats</h3>
           <div className="dictation-stats-grid">
             <div className="dictation-stat">
-              <span className="dictation-stat-label">Words dictated</span>
+              <span className="dictation-stat-label">Streak</span>
+              <strong className="dictation-stat-value">
+                {formatDays(summary.currentStreak)}
+              </strong>
+              <span className="dictation-stat-detail">
+                Best {formatDays(summary.longestStreak)}
+              </span>
+            </div>
+            <div className="dictation-stat">
+              <span className="dictation-stat-label">Words / min</span>
+              <strong className="dictation-stat-value">
+                {summary.wordsPerMinute === null
+                  ? "\u2013"
+                  : Math.round(summary.wordsPerMinute).toLocaleString()}
+              </strong>
+              {summary.lastWordsPerMinute !== null && (
+                <span className="dictation-stat-detail">
+                  Last {Math.round(summary.lastWordsPerMinute).toLocaleString()}
+                </span>
+              )}
+            </div>
+            <div className="dictation-stat">
+              <span className="dictation-stat-label">Words</span>
               <strong className="dictation-stat-value">
                 {Math.round(dictationStats.totalWords).toLocaleString()}
               </strong>
@@ -85,6 +134,46 @@ export function HomeView({
               </strong>
             </div>
           </div>
+          {/* Hidden while dictating so the Stop button stays in view. */}
+          {!isRecording && !isProcessing && (
+            <div
+              className="dictation-stats-week"
+              role="img"
+              aria-label={`Words per day, last 7 days: ${summary.week
+                .map(
+                  (day) =>
+                    `${dayLabelFormatter.format(parseDateKey(day.dateKey))} ${day.words.toLocaleString()}`,
+                )
+                .join(
+                  ", ",
+                )}. ${weekTotalWords.toLocaleString()} words this week.`}
+            >
+              {summary.week.map((day) => {
+                const words = Math.round(day.words);
+                const height =
+                  words > 0 && maxWeekWords > 0
+                    ? Math.max(4, (day.words / maxWeekWords) * 100)
+                    : 0;
+                return (
+                  <div
+                    key={day.dateKey}
+                    className={`dictation-stats-day${day.isToday ? " dictation-stats-day--today" : ""}`}
+                    title={`${dayLabelFormatter.format(parseDateKey(day.dateKey))}: ${words.toLocaleString()} ${words === 1 ? "word" : "words"}`}
+                  >
+                    <div className="dictation-stats-day-track">
+                      <div
+                        className="dictation-stats-day-bar"
+                        style={{ height: `${height}%` }}
+                      />
+                    </div>
+                    <span className="dictation-stats-day-label">
+                      {day.initial}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
           <p className="dictation-stats-comment">{funnyDictationComment}</p>
         </div>
       )}
@@ -153,4 +242,9 @@ export function HomeView({
       )}
     </div>
   );
+}
+
+function parseDateKey(key: string): Date {
+  const [year, month, day] = key.split("-").map(Number);
+  return new Date(year, month - 1, day);
 }

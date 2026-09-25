@@ -1,5 +1,5 @@
-import { GladiaFlowLogo } from "./GladiaFlowLogo";
-import { GladiaIcon } from "./GladiaIcon";
+import { SaydropWordmark } from "./SaydropWordmark";
+import { AppIcon } from "./AppIcon";
 
 export type NavScreen =
   | "home"
@@ -30,7 +30,7 @@ export function SidebarNav({
   return (
     <aside className="sidebar">
       <div className="logo">
-        <GladiaFlowLogo />
+        <SaydropWordmark />
       </div>
       <nav className="nav">
         {NAV_ITEMS.map((item) => (
@@ -39,7 +39,7 @@ export function SidebarNav({
             className={`nav-item ${activeScreen === item.id ? "nav-item-active" : ""}`}
             onClick={() => onNavigate(item.id)}
           >
-            <GladiaIcon name={item.icon} size={20} />
+            <AppIcon name={item.icon} size={20} />
             <span>{item.label}</span>
           </button>
         ))}

@@ -5,7 +5,7 @@ import {
   accessibilityStatusLabel,
   isAccessibilityGranted,
 } from "../lib/accessibilityPermission";
-import { GladiaIcon } from "./GladiaIcon";
+import { AppIcon } from "./AppIcon";
 
 export function PermissionsView({
   permissions,
@@ -34,7 +34,7 @@ export function PermissionsView({
     <div className="setup-step setup-step-center">
       <h2 className="setup-title">Permissions Required</h2>
       <p className="setup-desc">
-        GladiaFlow needs these permissions to work. Enable each one, then click
+        Saydrop needs these permissions to work. Enable each one, then click
         Re-check.
       </p>
       <div className="permissions-list">
@@ -42,7 +42,7 @@ export function PermissionsView({
           className={`permission-row ${axRowClass} permission-row--accessibility`}
         >
           <div className="permission-icon">
-            <GladiaIcon name="keyboard" size={16} />
+            <AppIcon name="keyboard" size={16} />
           </div>
           <div className="permission-info">
             <span className="permission-name">Accessibility</span>
@@ -66,7 +66,7 @@ export function PermissionsView({
           className={`permission-row ${micGranted ? "granted" : "needed"} permission-row--microphone`}
         >
           <div className="permission-icon">
-            <GladiaIcon name="microphone" size={16} />
+            <AppIcon name="microphone" size={16} />
           </div>
           <div className="permission-info">
             <span className="permission-name">Microphone</span>

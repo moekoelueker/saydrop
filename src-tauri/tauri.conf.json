@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/schema.json",
-  "productName": "GladiaFlow",
+  "productName": "Saydrop",
   "version": "0.1.0",
   "identifier": "io.gladia.gladiaflow",
   "build": {
@@ -10,10 +10,11 @@
     "frontendDist": "../dist"
   },
   "app": {
+    "macOSPrivateApi": true,
     "windows": [
       {
         "label": "main",
-        "title": "GladiaFlow",
+        "title": "Saydrop",
         "width": 800,
         "height": 600,
         "resizable": false,

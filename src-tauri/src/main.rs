@@ -17,6 +17,7 @@ mod gladia;
 mod history;
 mod hotkey;
 mod hotkey_layout;
+mod overlay;
 mod permissions;
 mod region;
 mod utterance_cleaner;
@@ -68,7 +69,7 @@ pub struct AppState {
 }
 
 const TRAY_ID: &str = "main-tray";
-const TRAY_ICON_IDLE: &[u8] = include_bytes!("../icons/32x32.png");
+const TRAY_ICON_IDLE: &[u8] = include_bytes!("../icons/tray-idle.png");
 const TRAY_ICON_DICTATING: &[u8] = include_bytes!("../icons/tray-microphone.png");
 const TRAY_SPINNER_FRAMES: &[&[u8]] = &[
     include_bytes!("../icons/tray-spinner/frame_00.png"),
@@ -101,6 +102,57 @@ impl FirstAudioChunkGate {
     }
 }
 
+// Level meter range for the voice indicator. Audio reaching this point has
+// already been through the software pre-amp (target RMS 0.12, about -18 dBFS),
+// so normal speech lands near 0.8 and room noise stays near 0.
+const AUDIO_LEVEL_FLOOR_DBFS: f32 = -50.0;
+const AUDIO_LEVEL_CEIL_DBFS: f32 = -10.0;
+// About 30 "audio-level" events per second.
+const AUDIO_LEVEL_EMIT_INTERVAL: Duration = Duration::from_millis(33);
+
+/// Loudness of a 16-bit little-endian mono PCM chunk, mapped from dBFS to 0.0..=1.0.
+fn audio_level_from_pcm16le(data: &[u8]) -> f32 {
+    let mut sum_squares = 0.0f64;
+    let mut count = 0usize;
+    for pair in data.chunks_exact(2) {
+        let sample = i16::from_le_bytes([pair[0], pair[1]]) as f64 / 32768.0;
+        sum_squares += sample * sample;
+        count += 1;
+    }
+    if count == 0 {
+        return 0.0;
+    }
+    let rms = (sum_squares / count as f64).sqrt() as f32;
+    if rms <= 0.0 {
+        return 0.0;
+    }
+    let dbfs = 20.0 * rms.log10();
+    ((dbfs - AUDIO_LEVEL_FLOOR_DBFS) / (AUDIO_LEVEL_CEIL_DBFS - AUDIO_LEVEL_FLOOR_DBFS))
+        .clamp(0.0, 1.0)
+}
+
+/// Keeps the loudest level seen since the last emit and releases it at most
+/// once per `AUDIO_LEVEL_EMIT_INTERVAL`, so short syllables are not dropped.
+#[derive(Default)]
+struct AudioLevelThrottle {
+    peak: f32,
+    last_emit: Option<Instant>,
+}
+
+impl AudioLevelThrottle {
+    fn observe(&mut self, level: f32, now: Instant) -> Option<f32> {
+        self.peak = self.peak.max(level);
+        let due = self
+            .last_emit
+            .map_or(true, |last| now.duration_since(last) >= AUDIO_LEVEL_EMIT_INTERVAL);
+        if !due {
+            return None;
+        }
+        self.last_emit = Some(now);
+        Some(std::mem::take(&mut self.peak))
+    }
+}
+
 fn tray_icon_from_bytes(bytes: &[u8]) -> Result<tauri::image::Image<'static>, String> {
     tauri::image::Image::from_bytes(bytes).map_err(|e| e.to_string())
 }
@@ -122,6 +174,7 @@ async fn apply_tray_activity(
     state: &AppState,
     activity: &str,
 ) -> Result<(), String> {
+    overlay::set_activity(app, activity);
     stop_tray_spinner(state).await;
 
     let tray = tray_handle(app)?;
@@ -129,7 +182,7 @@ async fn apply_tray_activity(
         "recording" => {
             let icon = tray_icon_from_bytes(TRAY_ICON_DICTATING)?;
             tray.set_icon(Some(icon)).map_err(|e| e.to_string())?;
-            tray.set_tooltip(Some("GladiaFlow — Dictating…"))
+            tray.set_tooltip(Some("Saydrop — Dictating…"))
                 .map_err(|e| e.to_string())?;
         }
         "starting" | "finalizing" => {
@@ -143,9 +196,9 @@ async fn apply_tray_activity(
                         if let Ok(tray) = tray_handle(&app_handle) {
                             let _ = tray.set_icon(Some(icon));
                             let tooltip = if starting {
-                                "GladiaFlow — Starting microphone…"
+                                "Saydrop — Starting microphone…"
                             } else {
-                                "GladiaFlow — Finalizing…"
+                                "Saydrop — Finalizing…"
                             };
                             let _ = tray.set_tooltip(Some(tooltip));
                         }
@@ -159,7 +212,7 @@ async fn apply_tray_activity(
         _ => {
             let icon = tray_icon_from_bytes(TRAY_ICON_IDLE)?;
             tray.set_icon(Some(icon)).map_err(|e| e.to_string())?;
-            tray.set_tooltip(Some("GladiaFlow"))
+            tray.set_tooltip(Some("Saydrop"))
                 .map_err(|e| e.to_string())?;
         }
     }
@@ -642,6 +695,7 @@ async fn start_audio_capture(
     let capture_started = Instant::now();
     tokio::task::spawn_blocking(move || {
         let mut readiness = FirstAudioChunkGate::default();
+        let mut level_throttle = AudioLevelThrottle::default();
         while let Ok(chunk) = rx.recv() {
             if readiness.observe() {
                 let _ = ready_app.emit(
@@ -652,6 +706,10 @@ async fn start_audio_capture(
                         "wakeLatencyMs": capture_started.elapsed().as_millis(),
                     }),
                 );
+            }
+            let level = audio_level_from_pcm16le(&chunk.data);
+            if let Some(level) = level_throttle.observe(level, Instant::now()) {
+                let _ = ready_app.emit("audio-level", level);
             }
             if tx.send(chunk.data).is_err() {
                 break;
@@ -698,6 +756,64 @@ mod readiness_tests {
         assert!(gate.observe());
         assert!(!gate.observe());
         assert!(!gate.observe());
+    }
+}
+
+#[cfg(test)]
+mod audio_level_tests {
+    use super::{audio_level_from_pcm16le, AudioLevelThrottle, AUDIO_LEVEL_EMIT_INTERVAL};
+    use std::time::{Duration, Instant};
+
+    fn constant_pcm(amplitude: i16, samples: usize) -> Vec<u8> {
+        (0..samples)
+            .flat_map(|_| amplitude.to_le_bytes())
+            .collect()
+    }
+
+    // A constant signal has RMS equal to its amplitude.
+    fn amplitude_for_dbfs(dbfs: f32) -> i16 {
+        (10f32.powf(dbfs / 20.0) * 32768.0).round() as i16
+    }
+
+    #[test]
+    fn empty_and_silent_chunks_are_zero() {
+        assert_eq!(audio_level_from_pcm16le(&[]), 0.0);
+        assert_eq!(audio_level_from_pcm16le(&constant_pcm(0, 480)), 0.0);
+    }
+
+    #[test]
+    fn maps_dbfs_range_linearly_and_clamps() {
+        let at = |dbfs| audio_level_from_pcm16le(&constant_pcm(amplitude_for_dbfs(dbfs), 480));
+        assert!(at(-60.0) == 0.0);
+        assert!(at(-50.0).abs() < 0.01);
+        assert!((at(-30.0) - 0.5).abs() < 0.01);
+        assert!((at(-10.0) - 1.0).abs() < 0.01);
+        assert!(at(-3.0) == 1.0);
+        assert!(audio_level_from_pcm16le(&constant_pcm(i16::MIN, 480)) == 1.0);
+    }
+
+    #[test]
+    fn ignores_trailing_odd_byte() {
+        let mut data = constant_pcm(amplitude_for_dbfs(-30.0), 480);
+        data.push(0x7f);
+        assert!((audio_level_from_pcm16le(&data) - 0.5).abs() < 0.01);
+    }
+
+    #[test]
+    fn throttle_emits_peak_at_most_once_per_interval() {
+        let start = Instant::now();
+        let mut throttle = AudioLevelThrottle::default();
+        assert_eq!(throttle.observe(0.2, start), Some(0.2));
+        assert_eq!(throttle.observe(0.9, start + Duration::from_millis(5)), None);
+        assert_eq!(throttle.observe(0.1, start + Duration::from_millis(10)), None);
+        assert_eq!(
+            throttle.observe(0.3, start + AUDIO_LEVEL_EMIT_INTERVAL),
+            Some(0.9)
+        );
+        assert_eq!(
+            throttle.observe(0.4, start + AUDIO_LEVEL_EMIT_INTERVAL * 2),
+            Some(0.4)
+        );
     }
 }
 
@@ -1235,7 +1351,7 @@ fn main() {
             let idle_icon = tray_icon_from_bytes(TRAY_ICON_IDLE)?;
             let _tray = TrayIconBuilder::with_id(TRAY_ID)
                 .icon(idle_icon)
-                .tooltip("GladiaFlow")
+                .tooltip("Saydrop")
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {
@@ -1263,6 +1379,10 @@ fn main() {
                     }
                 })
                 .build(app)?;
+
+            if let Err(error) = overlay::create(app.handle()) {
+                log::error!("[overlay] failed to create dictation pill: {error}");
+            }
 
             // Intercept window close: hide instead of destroying
             if let Some(window) = app.get_webview_window("main") {

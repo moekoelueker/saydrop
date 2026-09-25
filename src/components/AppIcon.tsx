@@ -1,4 +1,4 @@
-type GladiaIconName =
+type AppIconName =
   | "home"
   | "history"
   | "book"
@@ -7,7 +7,7 @@ type GladiaIconName =
   | "keyboard";
 
 const ICON_PATHS: Record<
-  GladiaIconName,
+  AppIconName,
   Array<{ d: string; fillRule?: "evenodd" }>
 > = {
   home: [
@@ -50,12 +50,12 @@ const ICON_PATHS: Record<
   ],
 };
 
-export function GladiaIcon({
+export function AppIcon({
   name,
   size = 20,
   className,
 }: {
-  name: GladiaIconName;
+  name: AppIconName;
   size?: number;
   className?: string;
 }) {

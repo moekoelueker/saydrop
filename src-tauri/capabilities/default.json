@@ -1,9 +1,10 @@
 {
   "identifier": "default",
-  "description": "Default capabilities for GladiaFlow",
-  "windows": ["main"],
+  "description": "Default capabilities for Saydrop",
+  "windows": ["main", "overlay"],
   "permissions": [
     "core:default",
+    "core:window:allow-start-dragging",
     "log:default",
     "notification:default",
     "global-shortcut:allow-register",

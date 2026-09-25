@@ -17,6 +17,32 @@
   --radius-sm: var(--radius-1);
   --radius-md: var(--radius-2);
   --radius-xl: var(--radius-3);
+
+  /* Theme-dependent effects (dark values = the original look) */
+  --shadow-dialog: 0 24px 80px rgba(0, 0, 0, 0.55);
+  --backdrop-dialog: rgba(0, 0, 0, 0.72);
+  --shadow-toast:
+    0 16px 40px color-mix(in srgb, black 36%, transparent),
+    0 2px 8px color-mix(in srgb, black 20%, transparent);
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23A3A3A3' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+}
+
+/* Light theme: app-level aliases and effects. Semantic colour tokens are
+   overridden in gladia-tokens.css; component tweaks are at the end of this
+   file under "Light theme surfaces". */
+:root[data-theme="light"] {
+  --accent-hover: var(--color-purple-700);
+  --divider: color-mix(in srgb, var(--text-primary) 9%, transparent);
+  --shadow-dialog:
+    0 24px 64px rgba(17, 17, 19, 0.16), 0 2px 8px rgba(17, 17, 19, 0.08);
+  --backdrop-dialog: rgba(17, 17, 19, 0.32);
+  --shadow-toast:
+    0 12px 32px rgba(17, 17, 19, 0.12), 0 2px 6px rgba(17, 17, 19, 0.06);
+  --shadow-card:
+    0 0 0 1px rgba(17, 17, 19, 0.07), 0 1px 2px rgba(17, 17, 19, 0.05);
+  --shadow-popover:
+    0 0 0 1px rgba(17, 17, 19, 0.08), 0 12px 32px rgba(17, 17, 19, 0.12);
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2352525A' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
 }
 
 * {
@@ -87,12 +113,37 @@ textarea {
 }
 
 .logo-wordmark {
-  display: block;
-  height: 16px;
-  width: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   max-width: 100%;
-  object-fit: contain;
-  object-position: left center;
+  color: var(--text-primary);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.logo-wordmark-mark {
+  width: 14px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.logo-wordmark-drop {
+  fill: var(--text-brand);
+}
+
+.logo-wordmark-wave {
+  fill: none;
+  stroke: var(--bg-primary);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.logo-wordmark-text {
+  font-size: var(--font-size-16);
+  font-weight: var(--font-weight-book);
+  letter-spacing: var(--letter-spacing-tight);
+  line-height: var(--line-height-tight);
 }
 
 .nav {
@@ -180,9 +231,12 @@ textarea {
 }
 
 .setup-step-home {
-  justify-content: center;
+  /* "safe" keeps the top reachable when the content is taller than the
+     600px window, and the step scrolls instead of clipping. */
+  justify-content: safe center;
   height: 100%;
   min-height: 0;
+  overflow-y: auto;
 }
 
 .setup-title-listening {
@@ -303,7 +357,7 @@ textarea {
 
 .dictation-stats-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--space-2);
 }
 
@@ -334,6 +388,68 @@ textarea {
   margin: var(--space-3) 0 0;
   font-size: var(--font-size-12);
   color: var(--text-secondary);
+}
+
+.dictation-stat-detail {
+  font-size: var(--font-size-12);
+  color: var(--text-tertiary);
+}
+
+.dictation-stats-week {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-1);
+  background: var(--bg-elevated);
+}
+
+.dictation-stats-day {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.dictation-stats-day-track {
+  position: relative;
+  width: 100%;
+  max-width: var(--space-8);
+  height: var(--space-10);
+  display: flex;
+  align-items: flex-end;
+  border-radius: var(--radius-1);
+  background: var(--bg-tertiary);
+  overflow: hidden;
+}
+
+.dictation-stats-day-bar {
+  width: 100%;
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--text-brand) 45%, transparent);
+  transition: height 240ms ease;
+}
+
+.dictation-stats-day--today .dictation-stats-day-bar {
+  background: var(--text-brand);
+}
+
+.dictation-stats-day-label {
+  font-size: var(--font-size-10);
+  color: var(--text-tertiary);
+}
+
+.dictation-stats-day--today .dictation-stats-day-label {
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-book);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dictation-stats-day-bar {
+    transition: none;
+  }
 }
 
 .vocab-toolbar {
@@ -515,11 +631,11 @@ textarea {
   border-radius: var(--radius-2);
   background: var(--bg-secondary);
   color: var(--text-primary);
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+  box-shadow: var(--shadow-dialog);
 }
 
 .vocab-editor-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.72);
+  background: var(--backdrop-dialog);
   backdrop-filter: blur(2px);
 }
 
@@ -1195,7 +1311,7 @@ textarea {
 select.api-key-input,
 select.form-input {
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23A3A3A3' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-image: var(--select-chevron);
   background-repeat: no-repeat;
   background-position: right 12px center;
   padding-right: 32px;
@@ -1344,7 +1460,7 @@ select.form-input {
   color: var(--text-primary);
   font-size: var(--font-size-14);
   font-weight: var(--font-weight-regular);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23A3A3A3' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-image: var(--select-chevron);
   background-repeat: no-repeat;
   background-position: right 12px center;
   padding-right: 32px;
@@ -1610,9 +1726,7 @@ select.form-input {
   border: 1px solid
     color-mix(in srgb, var(--status-warning) 32%, var(--border-card));
   border-radius: var(--radius-2);
-  box-shadow:
-    0 16px 40px color-mix(in srgb, black 36%, transparent),
-    0 2px 8px color-mix(in srgb, black 20%, transparent);
+  box-shadow: var(--shadow-toast);
   animation: hold-mode-toast-in 180ms var(--ease-out);
 }
 
@@ -1841,43 +1955,24 @@ select.form-input {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 1px;
 }
 
+/* Heights are driven from the live mic level in VoiceWaveIndicator.tsx via
+   transform: scaleY(), relative to this full height. */
 .voice-wave-bar {
-  width: 3px;
+  width: 2px;
+  height: 26px;
   background: var(--text-brand);
   border-radius: 2px;
-  transition: height 0.15s ease;
+  transform: scaleY(0.12);
+  transform-origin: center;
+  opacity: 0.6;
+  will-change: transform;
 }
 
 .voice-wave-bar.active {
-  animation: wave-bounce 0.6s ease-in-out infinite;
-}
-
-.voice-wave-bar:nth-child(1) {
-  animation-delay: 0ms;
-}
-.voice-wave-bar:nth-child(2) {
-  animation-delay: 80ms;
-}
-.voice-wave-bar:nth-child(3) {
-  animation-delay: 160ms;
-}
-.voice-wave-bar:nth-child(4) {
-  animation-delay: 240ms;
-}
-
-@keyframes wave-bounce {
-  0%,
-  100% {
-    height: 8px;
-    opacity: 0.6;
-  }
-  50% {
-    height: 20px;
-    opacity: 1;
-  }
+  opacity: 1;
 }
 
 .sound-wave {
@@ -1938,11 +2033,11 @@ select.form-input {
   border-radius: var(--radius-2);
   background: var(--bg-secondary);
   color: var(--text-primary);
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+  box-shadow: var(--shadow-dialog);
 }
 
 .config-reset-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.72);
+  background: var(--backdrop-dialog);
   backdrop-filter: blur(2px);
 }
 
@@ -2038,4 +2133,190 @@ select.form-input {
       var(--bg-elevated)
     );
   }
+}
+
+/* Floating dictation pill (separate always-on-top window, see
+   src-tauri/src/overlay.rs and DictationOverlay.tsx). */
+html.overlay-window,
+html.overlay-window body {
+  background: transparent;
+}
+
+.dictation-overlay {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.dictation-overlay:active {
+  cursor: grabbing;
+}
+
+.dictation-pill {
+  width: 44px;
+  height: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--color-neutral-900) 72%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-neutral-600) 60%, transparent);
+  overflow: hidden;
+  transition:
+    width 0.22s var(--ease-out),
+    height 0.22s var(--ease-out),
+    background 0.22s var(--ease-out);
+}
+
+.dictation-overlay:hover .dictation-pill:not(.expanded) {
+  width: 52px;
+  height: 14px;
+}
+
+.dictation-pill.expanded {
+  width: 112px;
+  height: 34px;
+  background: color-mix(in srgb, var(--color-neutral-900) 88%, transparent);
+  border-color: color-mix(in srgb, var(--text-brand) 45%, transparent);
+}
+
+.dictation-pill .voice-wave-bar {
+  height: 22px;
+}
+
+.dictation-pill--starting .voice-wave,
+.dictation-pill--finalizing .voice-wave {
+  animation: dictation-pill-wait 1s ease-in-out infinite;
+}
+
+@keyframes dictation-pill-wait {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dictation-pill {
+    transition: none;
+  }
+  .dictation-pill--starting .voice-wave,
+  .dictation-pill--finalizing .voice-wave {
+    animation: none;
+  }
+}
+
+/* Light theme surfaces. Dark stays exactly as defined above; these targeted
+   tweaks give white cards a hairline + soft shadow on the off-white page and
+   fix spots that assumed a dark background. */
+:root[data-theme="light"]
+  :is(
+    .bento,
+    .dictation-stats-card,
+    .home-api-spoiler,
+    .vocab-summary-row,
+    .vocab-summary-empty,
+    .vocab-pronunciation-row,
+    .vocab-pronunciation-empty,
+    .ready-icon,
+    .btn-secondary,
+    .transcription-history-item:hover,
+    .transcription-history-item--copied
+  ) {
+  box-shadow: var(--shadow-card);
+}
+
+/* Inputs and pickers: white fields need a visible edge on the light page. */
+:root[data-theme="light"]
+  :is(.api-key-input, .form-input, .multi-select-trigger, .shortcut-keys) {
+  box-shadow: inset 0 0 0 1px var(--border-card);
+}
+
+:root[data-theme="light"] .api-key-input-locked {
+  box-shadow: none;
+}
+
+/* Popovers float as white panels instead of grey slabs. */
+:root[data-theme="light"] :is(.multi-select-dropdown, .info-tooltip) {
+  background: var(--bg-tertiary);
+  box-shadow: var(--shadow-popover);
+}
+
+:root[data-theme="light"] .dropdown-option:hover {
+  background: var(--bg-elevated);
+}
+
+:root[data-theme="light"] .dropdown-option.selected {
+  background: color-mix(in srgb, var(--text-brand) 10%, var(--bg-tertiary));
+  color: var(--text-brand);
+}
+
+:root[data-theme="light"] .hold-mode-toast {
+  background: var(--bg-tertiary);
+}
+
+/* Hover states whose dark version lightened onto a now-white surface. */
+:root[data-theme="light"] .nav-item:hover:not(.nav-item-active) {
+  background: color-mix(in srgb, var(--text-primary) 6%, transparent);
+}
+
+:root[data-theme="light"]
+  :is(.hold-mode-toast-close, .vocab-editor-close):hover {
+  background: var(--bg-elevated);
+}
+
+:root[data-theme="light"] .info-icon:is(:hover, :focus-visible) {
+  background: color-mix(in srgb, var(--text-primary) 12%, transparent);
+}
+
+:root[data-theme="light"] .transcription-history-skeleton-lines span {
+  background: var(--bg-elevated);
+}
+
+/* Tracks and scrollbars need more weight than the grey inset colour. */
+:root[data-theme="light"] .toggle-slider {
+  box-shadow: inset 0 0 0 1px var(--border-card);
+}
+
+:root[data-theme="light"]
+  .toggle-switch
+  input[type="checkbox"]:checked
+  + .toggle-slider {
+  box-shadow: none;
+}
+
+:root[data-theme="light"] .endpointing-slider {
+  background: var(--border-secondary);
+}
+
+:root[data-theme="light"] .vocab-intensity-slider {
+  background: linear-gradient(
+    to right,
+    var(--border-secondary) 0 40%,
+    color-mix(in srgb, var(--status-success) 55%, var(--border-secondary)) 40%
+      60%,
+    var(--border-secondary) 60% 100%
+  );
+}
+
+:root[data-theme="light"] ::-webkit-scrollbar-thumb,
+:root[data-theme="light"] .vocab-pronunciation-list::-webkit-scrollbar-thumb {
+  background: var(--border-secondary);
+}
+
+:root[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: var(--color-neutral-400);
+}
+
+/* The faded footer drops below 4.5:1 on light; keep it at full token strength. */
+:root[data-theme="light"] .settings-region-footer {
+  opacity: 1;
 }

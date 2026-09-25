@@ -6,6 +6,7 @@ import {
 } from "../lib/keyboardUtils";
 import { InfoTooltip } from "./InfoTooltip";
 import { SettingsPageLayout } from "./SettingsPageLayout";
+import { ThemeSetting } from "./ThemeSetting";
 
 export function AppSettingsView({
   settings,
@@ -214,28 +215,31 @@ export function AppSettingsView({
         </div>
       </div>
 
-      <div className="form-group">
-        <label className="form-label">
-          Copy to clipboard
-          <InfoTooltip label="About copy to clipboard">
-            <strong>Copy to clipboard</strong>
-            When on, the full transcription is left on your clipboard after each
-            dictation.
-          </InfoTooltip>
-        </label>
-        <label className="toggle-switch" title="Copy to clipboard">
-          <input
-            type="checkbox"
-            checked={settings.copyToClipboard}
-            onChange={(e) =>
-              setSettings({
-                ...settings,
-                copyToClipboard: e.target.checked,
-              })
-            }
-          />
-          <span className="toggle-slider" />
-        </label>
+      <div className="settings-row">
+        <div className="form-group">
+          <label className="form-label">
+            Copy to clipboard
+            <InfoTooltip label="About copy to clipboard">
+              <strong>Copy to clipboard</strong>
+              When on, the full transcription is left on your clipboard after
+              each dictation.
+            </InfoTooltip>
+          </label>
+          <label className="toggle-switch" title="Copy to clipboard">
+            <input
+              type="checkbox"
+              checked={settings.copyToClipboard}
+              onChange={(e) =>
+                setSettings({
+                  ...settings,
+                  copyToClipboard: e.target.checked,
+                })
+              }
+            />
+            <span className="toggle-slider" />
+          </label>
+        </div>
+        <ThemeSetting />
       </div>
 
       <div className="form-group">

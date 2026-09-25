@@ -8,11 +8,42 @@ import { CustomVocabularyView } from "../components/CustomVocabularyView";
 import { TranscriptionSettingsView } from "../components/TranscriptionSettingsView";
 import { AppSettingsView } from "../components/AppSettingsView";
 import { DEFAULT_CUSTOM_VOCABULARY } from "../lib/customVocabulary";
-import { DEFAULT_DICTATION_STATS } from "../lib/dictationStats";
+import {
+  DEFAULT_DICTATION_STATS,
+  recordDictation,
+} from "../lib/dictationStats";
 import { EUROPEAN_LANGUAGES } from "../lib/languages";
 import type { AppSettings, TranscriptionHistoryPage } from "../types";
 
 const noop = () => {};
+const GALLERY_NOW = new Date(2026, 8, 24, 15);
+// [days ago, words, seconds] for a realistic recent week of dictations.
+const GALLERY_DICTATIONS: Array<[number, number, number]> = [
+  [9, 180, 80],
+  [6, 95, 40],
+  [5, 140, 62],
+  [5, 60, 25],
+  [4, 210, 95],
+  [2, 120, 52],
+  [2, 75, 30],
+  [1, 260, 110],
+  [0, 130, 55],
+  [0, 42, 18],
+];
+const GALLERY_DICTATION_STATS = GALLERY_DICTATIONS.reduce(
+  (stats, [daysAgo, words, seconds]) =>
+    recordDictation(stats, {
+      words,
+      seconds,
+      at: new Date(
+        GALLERY_NOW.getFullYear(),
+        GALLERY_NOW.getMonth(),
+        GALLERY_NOW.getDate() - daysAgo,
+        11,
+      ),
+    }),
+  DEFAULT_DICTATION_STATS,
+);
 const MOCK_SETTINGS: AppSettings = {
   apiKey: "sk-********",
   languages: ["en", "fr"],
@@ -49,12 +80,12 @@ const MOCK_HISTORY: TranscriptionHistoryPage = {
   items: [
     {
       id: "1",
-      text: "GladiaFlow makes dictation feel effortless once permissions and your API key are set up.",
+      text: "Saydrop makes dictation feel effortless once permissions and your API key are set up.",
       created_at: new Date(Date.now() - 3600000).toISOString(),
     },
     {
       id: "2",
-      text: "Custom vocabulary helps with product names like GladiaFlow and internal acronyms.",
+      text: "Custom vocabulary helps with product names like Saydrop and internal acronyms.",
       created_at: new Date(Date.now() - 86400000).toISOString(),
     },
     {
@@ -159,11 +190,13 @@ export function ScreenshotGallery() {
         <AppShell id="03-home-idle">
           <HomeView
             isRecording={false}
+            audioLevel={0}
             isProcessing={false}
             homeTitle="Ready to dictate"
             homeSubtitle="Hold Fn, speak, release."
-            dictationStats={{ totalWords: 1247, totalSeconds: 42 * 60 }}
-            formattedTotalTime="42 min"
+            dictationStats={GALLERY_DICTATION_STATS}
+            now={GALLERY_NOW}
+            formattedTotalTime="9 min"
             funnyDictationComment="You've saved roughly 3 coffee breaks worth of typing."
             apiKeyDisplayValue="****************"
             isApiKeyLocked
@@ -186,10 +219,12 @@ export function ScreenshotGallery() {
         <AppShell id="04-home-recording">
           <HomeView
             isRecording
+            audioLevel={0.6}
             isProcessing={false}
             homeTitle="Listening..."
             homeSubtitle={null}
             dictationStats={DEFAULT_DICTATION_STATS}
+            now={GALLERY_NOW}
             formattedTotalTime="0 min"
             funnyDictationComment=""
             apiKeyDisplayValue=""
@@ -213,11 +248,13 @@ export function ScreenshotGallery() {
         <AppShell id="04b-home-api-open">
           <HomeView
             isRecording={false}
+            audioLevel={0}
             isProcessing={false}
             homeTitle="Ready to dictate"
             homeSubtitle="Hold Fn, speak, release."
-            dictationStats={{ totalWords: 1247, totalSeconds: 42 * 60 }}
-            formattedTotalTime="42 min"
+            dictationStats={GALLERY_DICTATION_STATS}
+            now={GALLERY_NOW}
+            formattedTotalTime="9 min"
             funnyDictationComment="You've saved roughly 3 coffee breaks worth of typing."
             apiKeyDisplayValue="sk-example"
             isApiKeyLocked={false}
